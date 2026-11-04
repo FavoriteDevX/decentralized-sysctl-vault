@@ -1,67 +1,58 @@
 import sys
-import base64
-from guardian_core import GuardianCryptosystem, ServiceOrchestrator
+from guardian_core import GuardianCryptosystem, IncidentResponseOrchestrator
 
-def execute_governance_pipeline():
+def run_cyber_incident_pipeline():
     cryptosystem = GuardianCryptosystem()
     
-    print("=" * 70)
-    print("   ZERO-TRUST QUORUM-DRIVEN INFRASTRUCTURE ORCHESTRATOR SIMULATOR")
-    print("=" * 70)
+    print("=" * 75)
+    print("   ZERO-TRUST SECURE RECOVERY & CYBER INCIDENT RESPONSE PIPELINE")
+    print("=" * 75)
     
-    # Configure environmental defaults based on architecture reference profiles
     target_service = "Print Spooler" if sys.platform == "win32" else "nginx"
-    auth_token_payload = "ORCHESTRATION_STAGE_ALPHA_ACCESS_GRANTED"
-    total_distributed_tokens = 5
-    required_quorum_threshold = 3
+    incident_auth_token = "CYBER_DEFENSE_EMERGENCY_RECOVERY_PROTOCOL_ACTIVE"
+    total_guardians = 5
+    required_quorum = 3
     
-    # Analyze current environment state prior to pipeline activation
-    initial_status = ServiceOrchestrator.query_service_status(target_service)
-    print(f"[*] Target Daemon Registry: '{target_service}' | Pre-evaluation State: [{initial_status}]")
-    print(f"[*] Initializing Cryptographic Scheme Matrix: {required_quorum_threshold}-of-{total_distributed_tokens}")
-    
-    # Process original split operation
-    encrypted_payload_package, keyspaces = cryptosystem.split_system_secret(
-        auth_token_payload, required_quorum_threshold, total_distributed_tokens
+    # 1. Distribute keys to guardians before any attack occurs
+    encrypted_package, guardian_keys = cryptosystem.split_system_secret(
+        incident_auth_token, required_quorum, total_guardians
     )
-    print("[+] Core payload encrypted under AES-256-GCM. Secret keyspace split successfully.")
+    print("[+] Emergency Incident Response Keys distributed safely to Guardians.")
+    
+    print("\n" + "!" * 75)
+    print(" ALERT: CATASTROPHIC CYBERATTACK DETECTED (RANSOMWARE / DESTRUCTION ATTEMPT)")
+    print("!" * 75)
+    print(f"[*] Corrupted data stream detected targeting service: '{target_service}'")
+    
+    # 2. Automated Initial Defense: Quarantine immediately to protect other network components
+    # (This action does not require quorum because it is a defensive lockdown)
+    IncidentResponseOrchestrator.isolate_and_quarantine_service(target_service)
+    print(f"[!] System Status: Service '{target_service}' locked in quarantine zone.")
     
     print("\n" + "-" * 50)
-    print(" PIPELINE EVENT 0x01: SUB-THRESHOLD INTERACTION (REJECT EXPECTED)")
+    print(" EMERGENCY RECOVERY PHASE: COLLECTING GUARDIAN QUORUM")
     print("-" * 50)
     
-    malformed_quorum = keyspaces[:2] # Provoking anomaly with only (Threshold - 1) tokens
-    print(f"[!] Warning: Insufficient quorum presenting data nodes ({len(malformed_quorum)} presented).")
+    # Simulating 3 authorized guardians joining forces during the panic to recover the infrastructure
+    active_quorum = guardian_keys[:3]
+    print(f"[*] {len(active_quorum)} Global Guardians verified. Authenticating recovery sequence...")
     
     try:
-        cryptosystem.reconstruct_system_secret(encrypted_payload_package, malformed_quorum)
-    except Exception:
-        print("[+] Access Denied: Polynomial interpolation blocked. Cryptographic boundary secure.")
-        print(f"[*] System Health: Target service '{target_service}' left completely isolated.")
-
-    print("\n" + "-" * 50)
-    print(" PIPELINE EVENT 0x02: VALID QUORUM CONVERGENCE (EXECUTION EXPECTED)")
-    print("-" * 50)
-    
-    authorized_quorum = keyspaces[:3] # Satisfies the required Polynomial Quorum
-    print(f"[+] Success: Required quorum established ({len(authorized_quorum)} signatures registered). Processing...")
-    
-    try:
-        decrypted_auth_validation = cryptosystem.reconstruct_system_secret(encrypted_payload_package, authorized_quorum)
+        decrypted_token = cryptosystem.reconstruct_system_secret(encrypted_package, active_quorum)
         
-        if decrypted_auth_validation == auth_token_payload:
-            print("[+] Authorization validated against state machine. Signature authenticity verified.")
-            print("[*] Passing execution tokens down to OS orchestration interface layer...")
+        if decrypted_token == incident_auth_token:
+            print("[SUCCESS] Cryptographic consensus established. Recovery signature verified.")
+            print("[*] Launching system purge and emergency clean bootstrap...")
             
-            # Execute physical runtime integration sequence
-            runtime_success = ServiceOrchestrator.restart_target_service(target_service)
+            # 3. Secure Clean Restart: Clear infected registers/caches and spin up safely
+            recovery_success = IncidentResponseOrchestrator.emergency_clean_restart(target_service)
             
-            if runtime_success:
-                print("\n[==>] PIPELINE TASK COMPLETED: SYSTEM HARDWARE SERVICES SUCCESSFULY RECYCLED.")
+            if recovery_success:
+                print("\n[==>] INCIDENT RESOLVED: INFRASTRUCTURE RESTORED SAFELY VIA CRYPTOGRAPHIC QUORUM.")
             else:
-                print("\n[==>] DEPLOYMENT ERROR: Auth pipeline cleared but operating system rejected runtime request.")
-    except Exception as error_context:
-        print(f"[-] Unhandled kernel-space execution fault: {error_context}")
+                print("\n[==>] CRITICAL EXCEPTION: Cryptographic verification passed, but system level injection failed.")
+    except Exception as e:
+        print(f"[-] Forensic Fault: Cryptographic recovery blocked due to compromised parameter data: {e}")
 
 if __name__ == "__main__":
-    execute_governance_pipeline()
+    run_cyber_incident_pipeline()
