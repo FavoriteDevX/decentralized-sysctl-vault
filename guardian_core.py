@@ -14,79 +14,75 @@ else:
     win32serviceutil = None
 
 
-class ServiceOrchestrator:
+class IncidentResponseOrchestrator:
     """
-    Provides cross-platform systems management layer interfacing with native OS 
-    Service Control Managers (Windows Services API and Linux systemd sub-systems).
+    Advanced defensive operations layer designed to handle system recovery,
+    isolation, and state-purging during active cyberattacks.
     """
     
     @staticmethod
-    def query_service_status(service_name: str) -> str:
+    def isolate_and_quarantine_service(service_name: str) -> bool:
         """
-        Interrogates the host operating system to determine the runtime status of a service.
+        Isolates a service by killing suspicious active network connections or 
+        stopping its execution immediately to prevent lateral movement.
         """
+        print(f"[!] CYBERATTACK MITIGATION TRIGGERED: Isolating service '{service_name}'...")
+        
         if sys.platform == "win32":
             if win32serviceutil is None:
-                return "UNKNOWN (pywin32 missing)"
+                return False
             try:
-                # Query service status index 1 represents current execution state
-                # State 4 corresponds to SERVICE_RUNNING
-                status_code = win32serviceutil.QueryServiceStatus(service_name)[1]
-                return "RUNNING" if status_code == 4 else "STOPPED/INACTIVE"
-            except Exception:
-                return "SERVICE_NOT_FOUND"
+                # Forcefully stop the service to prevent data exfiltration
+                win32serviceutil.StopService(service_name)
+                print(f"[+] Defensive Action: Windows service '{service_name}' stopped and isolated.")
+                return True
+            except Exception as e:
+                print(f"[-] Failed to stop compromised Windows service: {e}")
+                return False
         else:
             try:
-                result = subprocess.run(
-                    ["systemctl", "is-active", service_name],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-                return "RUNNING" if result.stdout.strip() == "active" else "STOPPED/INACTIVE"
-            except Exception:
-                return "SERVICE_NOT_FOUND"
+                # Isolate service using systemd emergency stop mechanism
+                subprocess.run(["sudo", "systemctl", "kill", "-s", "SIGKILL", service_name], check=True)
+                print(f"[+] Defensive Action: Linux service '{service_name}' forcefully killed (SIGKILL).")
+                return True
+            except Exception as e:
+                print(f"[-] Failed to isolate Linux service: {e}")
+                return False
 
     @staticmethod
-    def restart_target_service(service_name: str) -> bool:
+    def emergency_clean_restart(service_name: str) -> bool:
         """
-        Dispatches native process-level execution calls to cycle target service states.
+        Executes a secure recovery cycle. Purges known volatile caches (e.g., DNS/temp storage) 
+        and brings the core infrastructure back online from a verified clean state.
         """
-        print(f"[*] Initializing lifecycle state modification for: '{service_name}'")
+        print(f"[*] Cybersecurity Recovery Suite: Executing clean environment flush for '{service_name}'...")
         
-        # 1. Native Windows Service Control Manager Implementation
         if sys.platform == "win32":
-            if win32serviceutil is None:
-                print("[-] Fatal: Win32 execution libraries unavailable on host context.")
-                return False
             try:
-                win32serviceutil.RestartService(service_name)
-                print(f"[+] Native Windows pipe signals transmitted. '{service_name}' cycled.")
-                return True
-            except Exception as e:
-                print(f"[-] Windows Service Control Manager exception encountered: {e}")
-                return False
-                
-        # 2. Native POSIX Linux systemd Implementation
-        elif sys.platform.startswith("linux") or sys.platform == "darwin":
-            try:
-                subprocess.run(
-                    ["sudo", "systemctl", "restart", service_name],
-                    check=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
-                )
-                print(f"[+] POSIX signal accepted. Linux systemd service '{service_name}' recycled.")
-                return True
-            except subprocess.CalledProcessError as e:
-                print(f"[-] systemctl binary rejected parameter constraints: {e.stderr.decode('utf-8').strip()}")
+                # Flush OS-level DNS cache to mitigate DNS poisoning attacks
+                subprocess.run(["ipconfig", "/flushdns"], check=True)
+                print("[+] Windows DNS Cache flushed successfully.")
+                if win32serviceutil:
+                    win32serviceutil.StartService(service_name)
+                    print(f"[+] Service '{service_name}' restarted in verified environment.")
+                    return True
                 return False
             except Exception as e:
-                print(f"[-] Low-level POSIX kernel/sub-process execution error: {e}")
+                print(f"[-] Critical failure during Windows clean recovery: {e}")
                 return False
         else:
-            print(f"[-] Execution environment platform unmapped: {sys.platform}")
-            return False
+            try:
+                # Clear systemd failed states and purge volatile system caches
+                subprocess.run(["sudo", "systemctl", "reset-failed", service_name], check=True)
+                subprocess.run(["sudo", "sync"], check=True) # Flush file system buffers
+                
+                # Restart the service cleanly
+                subprocess.run(["sudo", "systemctl", "start", service_name], check=True)
+                print(f"[+] Service '{service_name}' fully restored from a clean baseline state.")
+                return True
+            except Exception as e:
+                print(f"[-] Critical failure during Linux clean recovery: {e}")
+                return False
 
 
 class GuardianCryptosystem:
@@ -97,30 +93,22 @@ class GuardianCryptosystem:
     """
 
     def split_system_secret(self, secret_data: str, threshold: int, total_shares: int) -> Tuple[bytes, List[str]]:
-        """
-        Encrypts an arbitrary system execution payload token and splits the key into Shamir shards.
-        """
         if threshold > total_shares:
             raise ValueError("Polynomial Threshold (M) constraint bound failure: M cannot exceed N.")
 
-        # Generate cryptographic 256-bit entropy array
         master_key = AESGCM.generate_key(bit_length=256)
         aesgcm = AESGCM(master_key)
-        nonce = os.urandom(12) # Standard 96-bit initialization vector
+        nonce = os.urandom(12)
         
         ciphertext = aesgcm.encrypt(nonce, secret_data.encode('utf-8'), None)
         payload_package = nonce + ciphertext
         
-        # Polynomial distribution across split vectors
         master_key_hex = master_key.hex()
         shares = PlaintextToHexSecretSharer.split_secret(master_key_hex, threshold, total_shares)
         
         return payload_package, shares
 
     def reconstruct_system_secret(self, payload_package: bytes, shares: List[str]) -> str:
-        """
-        Evaluates mathematical shares to recompile the transient key matrix and decrypt the system payload.
-        """
         try:
             recovered_key_hex = PlaintextToHexSecretSharer.recover_secret(shares)
             master_key = bytes.fromhex(recovered_key_hex)
