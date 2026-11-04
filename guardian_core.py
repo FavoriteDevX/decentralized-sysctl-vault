@@ -1,11 +1,11 @@
 import os
 import sys
 import subprocess
+import json
 from typing import List, Tuple
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from secretsharing import PlaintextToHexSecretSharer
 
-# Platform verification for Windows environment hooks
 if sys.platform == "win32":
     try:
         import win32serviceutil
@@ -15,125 +15,104 @@ else:
     win32serviceutil = None
 
 
-class IncidentResponseOrchestrator:
+class ProductionIncidentResponder:
     """
-    Advanced defensive orchestration layer engineered to handle automated incident
-    mitigation, process isolation, and state-purging during active infrastructure attacks.
+    Enterprise-grade incident response orchestrator capable of executing containment
+    and environment sanitization protocols on live production environments.
     """
     
     @staticmethod
-    def isolate_and_quarantine_service(service_name: str) -> bool:
+    def isolate_network_and_service(service_name: str) -> bool:
         """
-        Executes immediate system containment. Terminating network hooks or stopping 
-        the target software asset to break the attacker's command-and-control loop.
+        Executes immediate host-level containment. Stops the targeted service and 
+        flushes routing or process hooks to break active malicious loops.
         """
-        print(f"[!] MALICIOUS ACTIVITY SIGNATURE DETECTED: Isolating service '{service_name}'...")
-        
-        # Windows Service Mitigation Track
         if sys.platform == "win32":
             if win32serviceutil is None:
-                print("[-] Hardware Hook Error: Win32 management modules missing on this host context.")
                 return False
             try:
+                # Forcefully request the Service Control Manager to halt execution
                 win32serviceutil.StopService(service_name)
-                print(f"[+] Containment Established: Windows Service '{service_name}' isolated from socket pool.")
                 return True
             except Exception as e:
-                print(f"[-] SCM Intervention Failure: Unable to forcefully halt service: {e}")
+                sys.stderr.write(f"[ERROR] SCM manipulation failed for {service_name}: {e}\n")
                 return False
-        
-        # POSIX/Linux systemd Mitigation Track
         else:
             try:
-                # Forcefully kill all execution threads belonging to the targeted daemon service
-                subprocess.run(["sudo", "systemctl", "kill", "-s", "SIGKILL", service_name], check=True)
-                print(f"[+] Containment Established: Linux daemon '{service_name}' terminated via SIGKILL.")
+                # Issue a SIGKILL signal directly via systemd to guarantee process termination
+                subprocess.run(["sudo", "systemctl", "kill", "-s", "SIGKILL", service_name], check=True, capture_output=True)
                 return True
-            except Exception as e:
-                print(f"[-] systemd Intervention Failure: Could not bind quarantine rule to process: {e}")
+            except subprocess.CalledProcessError as e:
+                sys.stderr.write(f"[ERROR] systemctl intervention rejected: {e.stderr.decode()}\n")
                 return False
 
     @staticmethod
-    def emergency_clean_restart(service_name: str) -> bool:
+    def execute_clean_bootstrap(service_name: str) -> bool:
         """
-        Purges compromised transient states (poisoned DNS records, overflowing request queues),
-        and safely bootstraps the core software component from a trusted clean baseline state.
+        Purges volatile system states, flushes local resolver caches to mitigate 
+        cache poisoning, and restarts the service daemon into a verified state.
         """
-        print(f"[*] Recovery Sequencer: Triggering cryptographic-backed clean bootstrap for '{service_name}'...")
-        
         if sys.platform == "win32":
             try:
-                # Mitigate DNS poisoning vectors by flushing the host resolver cache
-                subprocess.run(["ipconfig", "/flushdns"], check=True)
-                print("[+] Cache Purge: Windows local DNS resolution cache flushed cleanly.")
-                
+                # Flush the native OS DNS resolver cache to clear malicious routing redirection
+                subprocess.run(["ipconfig", "/flushdns"], check=True, capture_output=True)
                 if win32serviceutil:
                     win32serviceutil.StartService(service_name)
-                    print(f"[+] Recovery Complete: Service '{service_name}' resurrected on clean environment.")
                     return True
                 return False
             except Exception as e:
-                print(f"[-] Recovery Failure: Windows core environment flush failed: {e}")
+                sys.stderr.write(f"[ERROR] Windows environment flush failed: {e}\n")
                 return False
         else:
             try:
-                # Purge failed markers inside systemd daemon stack
-                subprocess.run(["sudo", "systemctl", "reset-failed", service_name], check=True)
-                subprocess.run(["sudo", "sync"], check=True) # Commit filesystem buffers to memory disk
-                
-                # Fire up the isolated internet-facing application service daemon safely
-                subprocess.run(["sudo", "systemctl", "start", service_name], check=True)
-                print(f"[+] Recovery Complete: Linux service '{service_name}' restored to stable operational baseline.")
+                # Reset failed state flags in systemd, sync disks, and start a fresh worker process
+                subprocess.run(["sudo", "systemctl", "reset-failed", service_name], check=True, capture_output=True)
+                subprocess.run(["sudo", "sync"], check=True, capture_output=True)
+                subprocess.run(["sudo", "systemctl", "start", service_name], check=True, capture_output=True)
                 return True
-            except Exception as e:
-                print(f"[-] Recovery Failure: Linux systemd bootstrap failed: {e}")
+            except subprocess.CalledProcessError as e:
+                sys.stderr.write(f"[ERROR] Linux clean bootstrap failed: {e.stderr.decode()}\n")
                 return False
 
 
-class GuardianCryptosystem:
+class QuorumGatekeeper:
     """
-    Implements a multi-party threshold access gateway using Authenticated Symmetric 
-    Cryptography (AES-GCM) intertwined with Lagrange Polynomial Secret Splitting (SSSS).
+    Cryptographic implementation of Shamir's Secret Sharing threshold scheme 
+    coupled with authenticated AES-GCM encryption for multi-party infrastructure authorization.
     """
 
-    def split_system_secret(self, secret_data: str, threshold: int, total_shares: int) -> Tuple[bytes, List[str]]:
+    def generate_emergency_vault(self, protection_token: str, threshold: int, total_shares: int) -> Tuple[bytes, List[str]]:
         """
-        Locks a core system token into an authenticated cryptopackage and splits the key into Shamir shards.
+        Encrypts the core management token and splinters the decryption key into independent cryptographic shares.
         """
         if threshold > total_shares:
-            raise ValueError("Mathematical constraint violation: Threshold quorums (M) cannot exceed total slices (N).")
+            raise ValueError("Invalid threshold constraints: M cannot be greater than N.")
 
-        # Generate a high-entropy 256-bit transient symmetric engine key
-        master_key = AESGCM.generate_key(bit_length=256)
-        aesgcm = AESGCM(master_key)
-        nonce = os.urandom(12)  # Standard Initialization Vector length
+        master_encryption_key = AESGCM.generate_key(bit_length=256)
+        aesgcm = AESGCM(master_encryption_key)
+        nonce = os.urandom(12)
         
-        ciphertext = aesgcm.encrypt(nonce, secret_data.encode('utf-8'), None)
-        payload_package = nonce + ciphertext
+        ciphertext = aesgcm.encrypt(nonce, protection_token.encode('utf-8'), None)
+        encrypted_package = nonce + ciphertext
         
-        # Distribute the keyspace across independent coordinates
-        master_key_hex = master_key.hex()
-        shares = PlaintextToHexSecretSharer.split_secret(master_key_hex, threshold, total_shares)
-        
-        return payload_package, shares
+        shares = PlaintextToHexSecretSharer.split_secret(master_encryption_key.hex(), threshold, total_shares)
+        return encrypted_package, shares
 
-    def reconstruct_system_secret(self, payload_package: bytes, shares: List[str]) -> str:
+    def authorize_and_unlock(self, encrypted_package: bytes, presented_shares: List[str]) -> str:
         """
-        Merges provided key shards to re-interpolate the master key and unlock system execution permissions.
+        Reconstructs the transient decryption key from the provided shares using polynomial interpolation.
         """
         try:
-            recovered_key_hex = PlaintextToHexSecretSharer.recover_secret(shares)
-            master_key = bytes.fromhex(recovered_key_hex)
+            recovered_key_hex = PlaintextToHexSecretSharer.recover_secret(presented_shares)
+            master_encryption_key = bytes.fromhex(recovered_key_hex)
         except Exception as e:
-            raise RuntimeError("Decryption Key Matrix interpolation failed. Insufficient or structurally damaged key shares.") from e
+            raise RuntimeError("Cryptographic quorum verification failed. Insufficient or invalid keys.") from e
 
-        if len(payload_package) < 12:
-            raise ValueError("Payload structural defect: Initialization vector bytes missing.")
+        if len(encrypted_package) < 12:
+            raise ValueError("Corrupted encrypted package package structure.")
             
-        nonce = payload_package[:12]
-        ciphertext = payload_package[12:]
+        nonce = encrypted_package[:12]
+        ciphertext = encrypted_package[12:]
         
-        aesgcm = AESGCM(master_key)
-        decrypted_bytes = aesgcm.decrypt(nonce, ciphertext, None)
-        
-        return decrypted_bytes.decode('utf-8')
+        aesgcm = AESGCM(master_encryption_key)
+        return aesgcm.decrypt(nonce, ciphertext, None).decode('utf-8')
